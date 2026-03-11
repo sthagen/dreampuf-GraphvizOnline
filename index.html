@@ -6,18 +6,25 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <title>Graphviz Online</title>
   <style type="text/css" media="screen">
-    body {
-      overflow: hidden;
-      margin: 0 0;
+    :root {
+      --splitter-width: 5px;
+      --editor-width: calc(50% - var(--splitter-width));
     }
-
-    :root:not(.ready) body,
-    :root.presentation :is(#editor, #editor-toggle, #splitter) {
+    :root.hide-options:not(.show-engine,.show-format,.show-raw,.show-download,.show-share) #options,
+    :root.hide-options #options > :not(div:last-child),
+    :root.hide-editor-toggle #editor-toggle {
+      display: none;
+    }
+    :root.show-engine #engine, :root.show-format #format, :root.show-raw #raw, :root.show-download :has(>#download), :root.show-share :has(>#share) {
+      display: initial!important;
+    }
+    :root:not(.ready) body {
       display: none;
     }
 
-    :root.presentation :is(#options, #review) {
-      left: 0;
+    body {
+      overflow: hidden;
+      margin: 0 0;
     }
 
     #editor-toggle {
@@ -48,6 +55,17 @@
       width: 20px;
     }
 
+    #toggle-btn::before { content: "▶"; }
+    #toggle-btn::after { content: "◀"; }
+    #toggle-btn::before, #toggle-btn::after {
+      position: absolute;
+      transition: visibility 0.2s ease;
+    }
+    :root:not(.editor-collapsed) #toggle-btn::before,
+    :root.editor-collapsed #toggle-btn::after {
+      visibility: hidden;
+    }
+
     #toggle-btn:hover {
       background: rgba(255, 255, 255, 0.9);
       box-shadow: 2px 0 6px rgba(0,0,0,0.12);
@@ -59,14 +77,14 @@
       box-shadow: 1px 0 3px rgba(0,0,0,0.05);
     }
 
-    #toggle-btn.collapsed {
+    :root.editor-collapsed #toggle-btn {
       background: linear-gradient(to right, #ffffff, #f8f9fa);
       border: 1px solid #dee2e6;
       box-shadow: 2px 0 4px rgba(0,0,0,0.08);
       color: #495057;
     }
 
-    #toggle-btn.collapsed:hover {
+    :root.editor-collapsed #toggle-btn:hover {
       background: linear-gradient(to right, #f8f9fa, #e9ecef);
       color: #212529;
     }
@@ -78,10 +96,10 @@
       bottom: 0;
       left: 0;
       transition: width 0.3s ease;
-      width: 50%;
+      width: var(--editor-width);
     }
 
-    #editor.collapsed {
+    :root.editor-collapsed #editor {
       width: 0 !important;
       overflow: hidden;
     }
@@ -90,16 +108,22 @@
       position: absolute;
       top: 0;
       bottom: 0;
-      left: 50%;
-      width: 5px;
+      left: var(--editor-width);
+      width: var(--splitter-width);
       background: #ccc;
       cursor: col-resize;
       z-index: 5;
-      transition: left 0.3s ease;
+      transition: left 0.3s ease, visibility 0.3s ease;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+    }
+
+    :root.editor-collapsed #splitter {
+      visibility: hidden;
+      left: 0!important;
+      cursor: initial;
     }
 
     #splitter::before {
@@ -119,35 +143,44 @@
       color: #222;
     }
 
-    #splitter.dragging {
+    :root.splitter-is-dragging #splitter {
       background: #666;
+    }
+
+    :root.splitter-is-dragging :is(#splitter, #editor, :has(>#review)) {
       transition: none;
     }
 
-    #splitter.dragging::before {
+    :root.splitter-is-dragging #splitter::before {
       color: #fff;
     }
 
-    #review {
-      margin: 0;
+    :root.splitter-is-dragging body {
+      cursor: col-resize;
+    }
+
+    :has(>#review) {
+      display: flex;
+      flex-direction: column;
       position: absolute;
-      top: 42px;
+      top: 0;
       bottom: 0;
       right: 0;
-      left: calc(50% + 5px);
-      overflow: scroll;
+      left: calc(var(--editor-width) + var(--splitter-width));
       transition: left 0.3s ease;
     }
 
-    #review.expanded {
+    #review {
+      flex-grow: 1;
+      min-height: 1px;
+      position: relative;
+    }
+
+    :root.editor-collapsed :has(>#review) {
       left: 0 !important;
     }
 
     #options {
-      margin: 0;
-      position: fixed;
-      left: calc(50% + 5px);
-      width: 100%;
       flex: 0 0 auto;
       background: linear-gradient(to bottom, #ffffff, #f8f9fa);
       border-bottom: 1px solid #dee2e6;
@@ -163,10 +196,6 @@
       z-index: 10;
     }
 
-    #options.expanded {
-      left: 0 !important;
-    }
-
     #options label {
       margin: 0;
       display: flex;
@@ -174,6 +203,7 @@
       gap: 6px;
       color: #495057;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     #options select {
@@ -231,6 +261,13 @@
       cursor: not-allowed;
     }
 
+    #options > div:last-child {
+      text-align: right;
+    }
+
+    #options > div:last-child > a > svg {
+      vertical-align: text-bottom;
+    }
 
     #status {
       width: 100%;
@@ -242,9 +279,6 @@
     }
 
     #review svg {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
     }
@@ -285,6 +319,7 @@
       top: 20px;
       left: 20px;
       margin-right: 20px;
+      padding: 0 1ex;
       background: red;
       color: white;
       z-index: 1;
@@ -335,7 +370,7 @@
 
 <body>
   <div id="editor-toggle">
-    <button id="toggle-btn">◀</button>
+    <button id="toggle-btn"></button>
   </div>
   <pre id="editor">digraph G {
 
@@ -365,59 +400,61 @@
   end [shape=Msquare];
 }</pre>
   <div id="splitter"></div>
-  <div id="options">
-    <label id="engine">
-      Engine:
-      <select>
-        <option>circo</option>
-        <option selected="">dot</option>
-        <option>fdp</option>
-        <option>nop</option>
-        <option>nop2</option>
-        <option>neato</option>
-        <option>sfdp</option>
-        <option>twopi</option>
-        <option>osage</option>
-        <option>patchwork</option>
-      </select>
-    </label>
+  <div>
+    <div id="options">
+      <label id="engine">
+        Engine:
+        <select>
+          <option>circo</option>
+          <option selected="">dot</option>
+          <option>fdp</option>
+          <option>nop</option>
+          <option>nop2</option>
+          <option>neato</option>
+          <option>sfdp</option>
+          <option>twopi</option>
+          <option>osage</option>
+          <option>patchwork</option>
+        </select>
+      </label>
 
-    <label id="format">
-      Format:
-      <select>
-        <option selected="">svg</option>
-        <option>png</option>
-        <option>json</option>
-        <option>xdot</option>
-        <option>plain</option>
-        <option>ps</option>
-      </select>
-    </label>
+      <label id="format">
+        Format:
+        <select>
+          <option selected="">svg</option>
+          <option>png</option>
+          <option>json</option>
+          <option>xdot</option>
+          <option>plain</option>
+          <option>ps</option>
+        </select>
+      </label>
 
-    <label id="raw" class="disabled">
-      <input type="checkbox" disabled=""> Show raw output
-    </label>
+      <label id="raw" class="disabled">
+        <input type="checkbox" disabled=""> Show raw output
+      </label>
 
-    <label>
-      <a href="#" target="_blank" id="download">Download</a>
-    </label>
+      <label>
+        <a href="#" target="_blank" id="download">Download</a>
+      </label>
 
-    <label>
-      <input type="button" value="Share" id="share">
-    </label>
+      <label>
+        <input type="button" value="Share" id="share">
+      </label>
 
-    <input type="input" value="" id="shareurl">
+      <input type="input" value="" id="shareurl">
 
-  </div>
-  <div id="review">
-    <div id="error"></div>
-  </div>
-  <div id="status"></div>
-  <div class="github-fork-ribbon-wrapper right">
-    <div class="github-fork-ribbon">
-      <a href="https://github.com/dreampuf/graphvizonline">Fork me on GitHub</a>
+      <div style="flex-grow: 1;">
+        <a href="https://github.com/dreampuf/GraphvizOnline">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="black"><path d="M10.303 16.652c-2.837-.344-4.835-2.385-4.835-5.028 0-1.074.387-2.235 1.031-3.008-.279-.709-.236-2.214.086-2.837.86-.107 2.02.344 2.708.967.816-.258 1.676-.386 2.728-.386 1.053 0 1.913.128 2.686.365.666-.602 1.848-1.053 2.708-.946.3.581.344 2.085.064 2.815.688.817 1.053 1.913 1.053 3.03 0 2.643-1.998 4.641-4.877 5.006.73.473 1.224 1.504 1.224 2.686v2.235c0 .644.537 1.01 1.182.752 3.889-1.483 6.94-5.372 6.94-10.185 0-6.081-4.942-11.044-11.022-11.044-6.081 0-10.98 4.963-10.98 11.044a10.84 10.84 0 0 0 7.112 10.206c.58.215 1.139-.172 1.139-.752v-1.719a2.768 2.768 0 0 1-1.032.215c-1.418 0-2.256-.773-2.857-2.213-.237-.58-.495-.924-.989-.988-.258-.022-.344-.129-.344-.258 0-.258.43-.451.86-.451.623 0 1.16.386 1.719 1.181.43.623.881.903 1.418.903.537 0 .881-.194 1.375-.688.365-.365.645-.687.903-.902Z"></path></svg>
+        </a>
+      </div>
+    </div>
+    <div id="review">
+      <div id="error"></div>
     </div>
   </div>
+  <div id="status"></div>
 
   <script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"
@@ -425,129 +462,86 @@
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="viz-global.js"></script>
   <script src="svg-pan-zoom.min.js" type="text/javascript" charset="utf-8"></script>
+  <script src="hammer.min.js" type="text/javascript" charset="utf-8"></script>
   <script>
+    (function adjustGithubRepositoryUrl(a) {
+      if (!(a && location.host.match('^([^.]+)\.github\.io$'))) { return; }
+      const ghuser = RegExp.$1;
+      const url = new URL(a.href);
+      const pathSplit = url.pathname.split('/');
+      pathSplit[1] = ghuser;
+      url.pathname = pathSplit.join('/');
+      a.href = url.href;
+    })(document.querySelector('#options > div:last-child > a:has(>svg)'));
+
     const editorElement = document.getElementById('editor');
     const reviewElement = document.getElementById('review');
-    const optionsElement = document.getElementById('options');
     const toggleBtn = document.getElementById('toggle-btn');
     const splitter = document.getElementById('splitter');
 
-    let isCollapsed = false;
-    let isDragging = false;
-    let currentSplitPercentage = 50;
+    // Splitter drag and double-click functionality
 
-    // Splitter drag functionality
+    splitter.addEventListener('dblclick', (e) => {
+      document.documentElement.style.setProperty('--editor-width', `calc(50% - var(--splitter-width))`);
+    });
     splitter.addEventListener('mousedown', (e) => {
-      if (isCollapsed) return;
-      isDragging = true;
-      splitter.classList.add('dragging');
-      document.body.style.cursor = 'col-resize';
-      // Disable transitions during drag
-      editorElement.style.transition = 'none';
-      splitter.style.transition = 'none';
-      reviewElement.style.transition = 'none';
-      optionsElement.style.transition = 'none';
+      document.documentElement.classList.add('splitter-is-dragging');
+      // overlay to prevent mouse pointer flickering when dragging the splitter to the left
+      const overlayElement = editorElement.appendChild(document.createElement('div'));
+      Object.assign(overlayElement.style, { position: 'absolute', inset: 0, zIndex: 10 });
+      document.addEventListener('mousemove', handleMouseMoveWhileDraggingSplitter);
+      document.addEventListener('mouseup', () => {
+        document.documentElement.classList.remove('splitter-is-dragging');
+        overlayElement.remove();
+        document.removeEventListener('mousemove', handleMouseMoveWhileDraggingSplitter);
+        resizeSVG();
+      }, { once: true });
       e.preventDefault();
     });
 
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      
+    function handleMouseMoveWhileDraggingSplitter(e) {
       const windowWidth = window.innerWidth;
       const newLeft = e.clientX;
       const percentage = (newLeft / windowWidth) * 100;
-      
+
       // Limit the splitter to reasonable bounds (10% to 90%)
       if (percentage >= 10 && percentage <= 90) {
-        currentSplitPercentage = percentage;
-        updatePanelSizes(percentage);
-      }
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        splitter.classList.remove('dragging');
-        document.body.style.cursor = '';
-        // Re-enable transitions after drag
-        editorElement.style.transition = '';
-        splitter.style.transition = '';
-        reviewElement.style.transition = '';
-        optionsElement.style.transition = '';
-        setTimeout(resizeSVG, 100);
-      }
-    });
-
-    function updatePanelSizes(percentage) {
-      if (!isCollapsed) {
-        editorElement.style.width = `${percentage}%`;
-        splitter.style.left = `${percentage}%`;
-        reviewElement.style.left = `calc(${percentage}% + 5px)`;
-        optionsElement.style.left = `calc(${percentage}% + 5px)`;
+        document.documentElement.style.setProperty('--editor-width', `${percentage}%`);
+        resizeSVG({ throttle: 100 });
       }
     }
 
     toggleBtn.addEventListener('click', () => {
-      isCollapsed = !isCollapsed;
-
-      if (isCollapsed) {
-        // Enable transitions for smooth collapse
-        editorElement.style.transition = 'width 0.3s ease';
-        splitter.style.transition = 'left 0.3s ease, opacity 0.3s ease';
-        reviewElement.style.transition = 'left 0.3s ease';
-        optionsElement.style.transition = 'left 0.3s ease';
-        
-        editorElement.classList.add('collapsed');
-        reviewElement.classList.add('expanded');
-        optionsElement.classList.add('expanded');
-        toggleBtn.classList.add('collapsed');
-        splitter.style.opacity = '0';
-        splitter.style.left = '0';
-        toggleBtn.innerHTML = '▶';
-        
-        // Hide splitter after animation
-        setTimeout(() => {
-          splitter.style.display = 'none';
-        }, 300);
-      } else {
-        // Position splitter at left edge initially
-        splitter.style.left = '0';
-        splitter.style.opacity = '0';
-        splitter.style.display = 'flex';  // Use flex instead of block to keep dots centered
-        
-        // Enable transitions for smooth expand
-        editorElement.style.transition = 'width 0.3s ease';
-        splitter.style.transition = 'left 0.3s ease, opacity 0.3s ease';
-        reviewElement.style.transition = 'left 0.3s ease';
-        optionsElement.style.transition = 'left 0.3s ease';
-        
-        setTimeout(() => {
-          editorElement.classList.remove('collapsed');
-          reviewElement.classList.remove('expanded');
-          optionsElement.classList.remove('expanded');
-          toggleBtn.classList.remove('collapsed');
-          toggleBtn.innerHTML = '◀';
-          // Restore the split position
-          updatePanelSizes(currentSplitPercentage);
-          splitter.style.opacity = '1';
-        }, 10);
-      }
-
-      setTimeout(resizeSVG, 300);
+      document.documentElement.classList.toggle('editor-collapsed')
     });
 
-    window.addEventListener('resize', resizeSVG);
+    let resizeSVGTimer = null;
+    window.addEventListener('resize', resizeSVG.bind(null, { throttle: 100 }));
+    editorElement.addEventListener('transitionend', resizeSVG);
 
-    function resizeSVG() {
+    let prevReviewRect;
+    // a valid bounding client rect is available after <body> is rendered
+    // (i.e. document.documentElement.classList.contains('ready'))
+    setTimeout(() => {
+      prevReviewRect = reviewElement.getBoundingClientRect();
+    }, 0);
+
+    function resizeSVG({ throttle } = {}) {
+      if (throttle) {
+        if (resizeSVGTimer) { return; }
+        resizeSVGTimer = setTimeout(resizeSVG, 100);
+        return;
+      } else {
+        clearTimeout(resizeSVGTimer);
+      }
+      resizeSVGTimer = null;
       const svg = document.querySelector('#review svg');
       if (svg) {
-        const panZoom = svgPanZoom(svg);
-        panZoom.resize();
-        panZoom.fit();
-        panZoom.center();
-
-        svg.style.width = '100%';
-        svg.style.height = '100%';
+        const currRect = reviewElement.getBoundingClientRect();
+        const dw = currRect.width - prevReviewRect.width;
+        const dh = currRect.height - prevReviewRect.height;
+        svgPanZoom(svg).resize().panBy({ x: dw / 2, y: dh / 2 });
+        prevReviewRect = currRect;
       }
     }
 
@@ -571,6 +565,12 @@
         shareURLEl = document.querySelector("#shareurl"),
         errorEl = document.querySelector("#error");
 
+      // if the editor is initally hidden in presentation mode,
+      // we need to trigger a resize once
+      const boundEditorResize = editor.resize.bind(editor, true);
+      editorElement.addEventListener('transitionstart', boundEditorResize, { once: true });
+      editorElement.addEventListener('transitionend', boundEditorResize, { once: true });
+
       function show_status(text, hide) {
         hide = hide || 0;
         clearTimeout(t_stetus);
@@ -584,6 +584,7 @@
 
       function show_error(e) {
         console.trace();
+        console.error(e);
         show_status("error", 500);
         reviewer.classList.remove("working");
         reviewer.classList.add("error");
@@ -626,6 +627,8 @@
         let content = encodeURIComponent(editor.getSession().getDocument().getValue());
         const longUrl = new URL(location.href);
         longUrl.hash = content;
+        // encode preserved commas from updateState()
+        longUrl.search = longUrl.searchParams.toString();
 
         shareEl.disabled = true;
         let n = 0;
@@ -645,7 +648,7 @@
           }).catch((err) => {
             const rawContent = editor.getSession().getDocument().getValue();
             const compressedContent = LZString.compressToEncodedURIComponent(rawContent);
-            
+
             const compressedUrl = new URL(location.href);
             compressedUrl.searchParams.append("compressed", compressedContent);
             compressedUrl.hash = "";
@@ -717,7 +720,9 @@
         const content = encodeURIComponent(editor.getSession().getDocument().getValue());
         updatedUrl.hash = content
         // Search params
-        updatedUrl.searchParams.set("engine", engineEl.value)
+        updatedUrl.searchParams.set("engine", engineEl.value);
+        // preserve commas in search params
+        updatedUrl.search = updatedUrl.searchParams.toString().replaceAll('%2C', ',');
         history.pushState({ "content": content, "engine": engineEl.value }, "", updatedUrl.toString())
       }
 
@@ -763,6 +768,59 @@
             controlIconsEnabled: true,
             fit: true,
             center: true,
+            // based on https://github.com/bumbu/svg-pan-zoom/blob/master/demo/mobile.html
+            // added stuff around svgElement.getBoundingClientRect()
+            customEventsHandler: {
+              haltEventListeners: ['touchstart', 'touchend', 'touchmove', 'touchleave', 'touchcancel']
+              , init: function (options) {
+                var instance = options.instance
+                  , initialScale = 1
+                  , pannedX = 0
+                  , pannedY = 0
+                  , clientX = 0
+                  , clientY = 0
+                // Init Hammer
+                // Listen only for pointer and touch events
+                this.hammer = Hammer(options.svgElement, {
+                  inputClass: Hammer.SUPPORT_POINTER_EVENTS ? Hammer.PointerEventInput : Hammer.TouchInput
+                })
+                // Enable pinch
+                this.hammer.get('pinch').set({ enable: true })
+                // Handle double tap
+                this.hammer.on('doubletap', function (ev) {
+                  instance.zoomIn()
+                })
+                // Handle pan
+                this.hammer.on('panstart panmove', function (ev) {
+                  // On pan start reset panned variables
+                  if (ev.type === 'panstart') {
+                    pannedX = 0
+                    pannedY = 0
+                  }
+                  // Pan only the difference
+                  instance.panBy({ x: ev.deltaX - pannedX, y: ev.deltaY - pannedY })
+                  pannedX = ev.deltaX
+                  pannedY = ev.deltaY
+                })
+                // Handle pinch
+                this.hammer.on('pinchstart pinchmove', function (ev) {
+                  // On pinch start remember initial zoom
+                  if (ev.type === 'pinchstart') {
+                    ({x: clientX, y: clientY } = options.svgElement.getBoundingClientRect());
+                    initialScale = instance.getZoom()
+                  }
+                  instance.zoomAtPoint(initialScale * ev.scale, {
+                    x: ev.center.x - clientX,
+                    y: ev.center.y - clientY,
+                  });
+                })
+                // Prevent moving the page on some devices when panning over SVG
+                options.svgElement.addEventListener('touchmove', function (e) { e.preventDefault(); });
+              }
+              , destroy: function () {
+                this.hammer.destroy()
+              }
+            },
           });
         } else if (formatEl.value == "png") {
           var serializer = new XMLSerializer();
@@ -796,10 +854,24 @@
         updateState()
       }
 
+      let renderGraphImmediately = false;
       editor.setTheme("ace/theme/twilight");
       editor.getSession().setMode("ace/mode/dot");
-      editor.getSession().on("change", function () {
+      editor.getSession().setValueAndRenderGraphImmediately = (value) => {
+        renderGraphImmediately = true;
+        editor.getSession().setValue(value);
+      }
+      editor.getSession().on("change", function (delta) {
         clearTimeout(lastHD);
+        if (renderGraphImmediately) {
+          lastHD = -1;
+          // do not render after 'remove'
+          if (delta.action === 'insert') {
+            renderGraph();
+            renderGraphImmediately = false;
+          }
+          return;
+        }
         lastHD = setTimeout(renderGraph, 1500);
       });
 
@@ -808,6 +880,39 @@
           editor.getSession().setValue(decodeURIComponent(event.state.content));
         }
       };
+
+      (function initEditorStableWidthGutterRenderer() {
+        let numberOfLines;
+        let gutterChars;
+        let gutterWidth;
+        let gutterPad;
+        function ensureGutterPad(session) {
+          const n = session.doc.$lines.length;
+          if (n !== numberOfLines) {
+            numberOfLines = n;
+            gutterChars = String(n).length;
+            gutterPad = ' '.repeat(gutterChars < 3 ? 3 : gutterChars);
+            gutterWidth = undefined;
+          }
+        }
+        function ensureGutterWidth(session, config) {
+          ensureGutterPad(session);
+          if (gutterWidth === undefined) {
+            gutterWidth = gutterChars * config.characterWidth;
+          }
+          return gutterWidth;
+        }
+        editor.session.gutterRenderer = {
+          getText: function (session, row) {
+            ensureGutterPad(session);
+            return (gutterPad + row).slice(-gutterChars);
+          },
+          getWidth: function (session, lastLineNumber, config) {
+            ensureGutterWidth(session, config);
+            return gutterWidth;
+          },
+        };
+      }).call();
 
       formatEl.addEventListener("change", renderGraph);
       engineEl.addEventListener("change", renderGraph);
@@ -848,19 +953,24 @@
       }
 
       if (params.has('presentation')) {
-        document.documentElement.classList.add('presentation');
-        for (const option of params.get('presentation').split(',')) {
-          document.documentElement.classList.add(`presentation-${option}`);
+        const classList = document.documentElement.classList;
+        classList.add('editor-collapsed', 'hide-editor-toggle');
+        const options = params.get('presentation').split(',');
+        if (options.indexOf('editable') !== -1) {
+          classList.remove('hide-editor-toggle');
         }
-
+        for (const option of options) {
+          if (option.startsWith('show-') || option.startsWith('hide-')) {
+            classList.add(option);
+          }
+        }
       }
 
       if (params.has('raw')) {
-        editor.getSession().setValue(params.get('raw'));
-        renderGraph();
+        editor.getSession().setValueAndRenderGraphImmediately(params.get('raw'));
       } else if (params.has('compressed')) {
         const compressed = params.get('compressed');
-        editor.getSession().setValue(LZString.decompressFromEncodedURIComponent(compressed));
+        editor.getSession().setValueAndRenderGraphImmediately(LZString.decompressFromEncodedURIComponent(compressed));
       } else if (params.has('url')) {
         const url = params.get('url');
         let ok = false;
@@ -874,13 +984,12 @@
               throw { message: res };
             }
 
-            editor.getSession().setValue(res);
-            renderGraph();
+            editor.getSession().setValueAndRenderGraphImmediately(res);
           }).catch(e => {
             show_error(e);
           });
       } else if (location.hash.length > 1) {
-        editor.getSession().setValue(decodeURIComponent(location.hash.substring(1)));
+        editor.getSession().setValueAndRenderGraphImmediately(decodeURIComponent(location.hash.substring(1)));
       } else if (editor.getValue()) { // Init
         renderGraph();
       }

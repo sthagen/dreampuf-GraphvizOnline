@@ -14,7 +14,13 @@ Using https://gist.github.com/ allows you to share and version your graph defini
 
 ## Presentation mode
 
-If you would like to display just the graph and not the graph input, you can add a `?presentation` query param. This can be helpful when generating links with the graph already prefilled.
+If you would like to display just the graph and not the graph input, you can add a `?presentation` query param. This can be helpful when generating links with the graph already prefilled. You might set the param to comma separated list of the following values:
+
+- `editable`: show the editor-toggle button
+- `hide-options`: hide the options bar at top of page
+- `show-engine`, `show-format`, `show-raw`, `show-download`, `show-share`: show some some options in conjuntion with `hide-options`
+
+Example: `?presentation=editable,hide-options,show-download`
 
 # How to implement this
 
